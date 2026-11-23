@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vulnerability Consumer Score</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: engineering datasheet, exact and calm; the finding leads.
+   IDEA: a ratings sheet, one graded row per issuer, like a credit rating table.
+   PICTURE: the ranked score ladder itself, bars sized by score, graded A–F.
+   COLOUR and TYPE: cobalt title strip, white ground, black ink, pale cobalt zones; Space Grotesk + Inter.
+   LAYOUT: title strip, key figures, controls rail beside the ladder, then method and sources. */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0a0d18);--ink:light-dark(#0b0d14,#e8ebf5);--mute:light-dark(#566078,#98a2bd);--zone:light-dark(#eef2ff,#121a33);--line:light-dark(#d5dcf0,#243055);--co:#1240e0;--coInk:light-dark(#1240e0,#7d9bff);
+--gA:light-dark(#0f7a43,#4cd38d);--gB:light-dark(#4f8a12,#a6d65a);--gC:light-dark(#a07a00,#f0c44c);--gD:light-dark(#c0560a,#ff9c55);--gF:light-dark(#c4162a,#ff6b7a)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:"Space Grotesk",Inter,sans-serif;margin:0;line-height:1.1;text-wrap:balance}
+.strip{background:var(--co);color:#fff;padding:22px max(5vw,16px) 20px}
+.strip h1{font-size:clamp(26px,3.6vw,40px);font-weight:700}
+.strip p{margin:6px 0 0;opacity:.9;font-size:15px;max-width:80ch}
+.band{padding:clamp(20px,3vw,40px) max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+.finding{font-family:"Space Grotesk",sans-serif;font-size:clamp(20px,2.4vw,26px);font-weight:600;line-height:1.25;margin:0 0 18px;text-wrap:balance}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:22px}
+.kpi{background:var(--bg);padding:12px 14px}.kpi b{display:block;font:600 clamp(22px,2.6vw,30px)/1.1 "Space Grotesk",sans-serif;font-variant-numeric:tabular-nums}.kpi span{font-size:13px;color:var(--mute)}
+.grid{display:grid;grid-template-columns:280px minmax(0,1fr);gap:24px;align-items:start}
+.rail{background:var(--zone);padding:16px;border:1px solid var(--line)}
+.rail h3{font-size:16px;margin:0 0 8px}.rail section+section{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+label{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px;margin:6px 0}
+input,select,button{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;min-height:40px;padding:6px 8px}
+input[type=number]{width:84px;text-align:right}select{min-width:96px}
+input:focus-visible,select:focus-visible,button:focus-visible,tr:focus-visible{outline:3px solid var(--coInk);outline-offset:1px}
+.presets{display:flex;flex-wrap:wrap;gap:6px}.presets button{cursor:pointer;font-size:14px;min-height:36px}.presets button.on{background:var(--co);color:#fff;border-color:var(--co)}
+.search{width:100%;margin-bottom:10px}
+.hint{font-size:13px;color:var(--mute);margin:6px 0 0}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+th{font-weight:600;text-align:left;font-size:13px;color:var(--mute);padding:8px 6px;border-bottom:2px solid var(--ink);white-space:nowrap;cursor:pointer;user-select:none}
+th.n,td.n{text-align:right}th[aria-sort]::after{content:" ▾"}th[aria-sort=ascending]::after{content:" ▴"}
+td{padding:7px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody tr.row{cursor:pointer}tbody tr.row:hover{background:var(--zone)}
+.co{white-space:normal}.co b{font-weight:600}.co small{color:var(--mute);margin-left:6px}.co span{display:block;font-size:12px;color:var(--mute)}
+.emp{width:88px;min-height:32px;padding:2px 6px;font-size:14px}
+.bar{display:flex;align-items:center;gap:8px;min-width:120px}.bar i{display:block;height:12px;border-radius:2px}.bar em{font-style:normal;font-weight:600;width:2.2em;text-align:right}
+.g{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:4px;color:#fff;font:700 14px "Space Grotesk",sans-serif}
+.gA{background:var(--gA)}.gB{background:var(--gB)}.gC{background:var(--gC)}.gD{background:var(--gD)}.gF{background:var(--gF)}
+:root[data-theme=dark] .g,.g{color:light-dark(#fff,#0a0d18)}
+tr.det td{background:var(--zone);white-space:normal;padding:14px}
+.det-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+.yr{display:grid;grid-template-columns:3.2em minmax(0,1fr) 4em;gap:8px;align-items:center;font-size:13px;margin:3px 0}
+.stackbar{display:flex;height:14px;background:var(--bg);border:1px solid var(--line)}.stackbar span{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--mute);margin:8px 0}.legend i{display:inline-block;width:10px;height:10px;margin-right:4px;vertical-align:-1px}
+.kev{list-style:none;padding:0;margin:0;font-size:13px}.kev li{padding:4px 0;border-bottom:1px solid var(--line)}.kev code{font-weight:600}.rw{color:var(--gF);font-weight:600}
+.method{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px}
+.method h2{font-size:24px;margin-bottom:10px}.method h3{font-size:17px;margin:16px 0 4px}.method p,.method li{max-width:70ch;font-size:15px}
+.formula{background:var(--zone);border-left:4px solid var(--co);padding:10px 14px;font-size:15px}
+footer{font-size:13px;color:var(--mute)}footer a{color:var(--coInk)}
+@media(max-width:900px){.grid,.method,.det-grid{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){table{font-size:13px}.hide-s,.hide-xs{display:none}.bar{min-width:70px}td,th{padding:7px 3px}}
+@media(max-width:900px){.rail{order:2}}
+@media(prefers-reduced-motion:no-preference){.bar i{transition:width .35s ease}}
+</style></head><body>
+<header class="strip"><div class="wrap">
+<h1>Vulnerability Consumer Score</h1>
+<p>Grades public companies on the CVEs disclosed in their products, weighted by severity and by whether attackers have exploited them, per 1,000 employees. Higher score = fewer serious vulnerabilities for its size.</p>
+</div></header>
+
+<main>
+<div class="band"><div class="wrap">
+<p class="finding" id="finding"></p>
+<div class="kpis" id="kpis"></div>
+<div class="grid">
+<aside class="rail" aria-label="Scoring controls">
+<section><h3>Presets</h3><div class="presets" id="presets"></div><p class="hint" id="presetHint"></p></section>
+<section><h3>Window (year published)</h3>
+<label>From <select id="yFrom"></select></label><label>To <select id="yTo"></select></label>
+<p class="hint">2026 is year-to-date.</p></section>
+<section><h3>Points per CVE</h3>
+<label>Critical (9.0–10) <input type="number" id="w0" min="0" step="1"></label>
+<label>High (7.0–8.9) <input type="number" id="w1" min="0" step="1"></label>
+<label>Medium (4.0–6.9) <input type="number" id="w2" min="0" step="1"></label>
+<label>Low / none <input type="number" id="w3" min="0" step="1"></label>
+<label>No CVSS score <input type="number" id="w4" min="0" step="1"></label>
+<label>Added to CISA KEV <input type="number" id="w5" min="0" step="1"></label>
+<p class="hint">KEV points are added on top of the CVE's severity points, counted in the year CISA added it.</p></section>
+<section><h3>Normalize by</h3>
+<label>Size <select id="norm"><option value="emp">Per 1,000 employees</option><option value="none">None (raw points)</option></select></label></section>
+<section><h3>Filter</h3>
+<label>Sector <select id="sector"><option value="">All</option></select></label></section>
+</aside>
+<div>
+<input class="search" id="q" type="search" placeholder="Search company or ticker" aria-label="Search company or ticker">
+<div class="scroll"><table id="tbl"><thead><tr>
+<th data-k="rank" class="n">#</th><th data-k="name">Company</th>
+<th data-k="employees" class="n hide-s">Employees</th><th data-k="cves" class="n hide-xs">CVEs</th><th data-k="crit" class="n hide-s">Crit</th><th data-k="high" class="n hide-s">High</th><th data-k="kev" class="n">KEV</th>
+<th data-k="density" class="n hide-s">Pts / 1k emp</th><th data-k="score">Score</th><th data-k="grade">Grade</th></tr></thead><tbody id="tb"></tbody></table></div>
+<p class="hint">Click a row for the yearly breakdown and recent exploited CVEs. Employee counts are editable; your edits stay in this browser.</p>
+</div></div>
+</div></div>
+
+<div class="band" style="background:var(--zone)"><div class="wrap method">
+<div>
+<h2>How the score works</h2>
+<p class="formula"><b>Risk points</b> = Σ (CVEs × severity points) + KEV additions × KEV points<br><b>Density</b> = risk points ÷ (employees ÷ 1,000)<br><b>Score</b> = 100 ÷ (1 + density ÷ cohort median density)</p>
+<p>The median company in the current view scores 50. A company with half the median density scores 67; double the median scores 33. Grades: A ≥ 80, B ≥ 65, C ≥ 50, D ≥ 35, F below.</p>
+<h3>Attribution</h3>
+<p>A CVE counts against a company when its CVE record (the CNA's "affected" vendor, or CPE vendor added by CISA's ADP enrichment) names one of the company's brands. Where a company's own CNA published a record with no vendor named (Intel does this for all of its CVEs), the assigner is used. Acquisitions are rolled up: VMware, Brocade and Symantec into Broadcom; Splunk into Cisco; Juniper and Aruba into HPE; Red Hat and HashiCorp into IBM; Axis into Canon; CyberArk into Palo Alto Networks.</p>
+<h3>Severity</h3>
+<p>Highest CVSS base severity in the record (v4.0, v3.1, v3.0, then v2), from the CNA first and CISA's ADP enrichment second. Microsoft and others rate most findings "Important", which maps to CVSS High.</p>
+</div>
+<div>
+<h2>Read it with care</h2>
+<ul>
+<li><b>Disclosure is not insecurity.</b> Companies with mature PSIRTs, bug bounties and their own CNA publish more CVEs. A low CVE count can mean fewer bugs, or fewer that were disclosed. The KEV weight exists because exploitation in the wild is the better signal of consumer harm.</li>
+<li><b>Cloud services rarely get CVEs.</b> SaaS-heavy companies (Salesforce, ServiceNow, Shopify, Meta, Amazon's retail side) fix issues server-side, so they look clean here by construction.</li>
+<li><b>Headcount favours large conglomerates.</b> Siemens, Hitachi and Samsung spread their CVEs across hundreds of thousands of employees, most of whom don't write software. Small product companies with large device fleets (D-Link, Netgear, Ubiquiti) take the opposite hit.</li>
+<li><b>Employee counts are approximate</b>, from the latest annual report available as of mid-2026, and the fiscal year is shown on hover. Correct them in the table.</li>
+<li><b>2026 volume roughly doubled</b> across the whole CVE program (<span id="uni"></span>), largely from AI-assisted discovery. Compare companies within the same window rather than across years.</li>
+<li><b>IBM includes Red Hat.</b> Red Hat's CNA records many upstream open-source flaws (shipped in RHEL) as Red Hat-affected, so most of IBM's count is open-source components rather than IBM-authored code.</li>
+</ul>
+</div>
+</div></div>
+
+<footer class="band"><div class="wrap">
+Data: <a href="https://github.com/CVEProject/cvelistV5">CVE List V5</a> (CVE Program, snapshot <span id="gen"></span>), <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog">CISA Known Exploited Vulnerabilities catalog</a> (version <span id="kevv"></span>). Headcounts from company annual reports (approximate). Not investment advice; a screening tool, not a security audit.
+</div></footer>
+</main>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+{
+const D=JSON.parse(document.getElementById('data').textContent);
+const YEARS=D.years;
+const PRESETS={
+ balanced:{label:"Balanced",w:[10,5,2,1,2,50],hint:"Severity matters; exploitation matters most."},
+ exploited:{label:"Exploited-first",w:[2,1,0,0,0,100],hint:"Mostly scores actual in-the-wild exploitation."},
+ severity:{label:"Severity only",w:[10,5,2,1,2,0],hint:"Ignores KEV; pure disclosed-severity load."},
+ count:{label:"Raw count",w:[1,1,1,1,1,0],hint:"Every CVE counts the same."}
+};
+const SEVC=['var(--gF)','var(--gD)','var(--gC)','var(--gB)','var(--mute)'];
+const SEVN=['Critical','High','Medium','Low','Unscored'];
+const fmt=n=>n.toLocaleString('en-US');
+const $=id=>document.getElementById(id);
+let empEdits={};try{empEdits=JSON.parse(localStorage.getItem('vcs-emp')||'{}')}catch(e){}
+const st={w:PRESETS.balanced.w.slice(),preset:'balanced',from:2024,to:2026,norm:'emp',sector:'',q:'',sort:'rank',dir:'asc',open:null};
+
+$('gen').textContent=D.generated;$('kevv').textContent=D.kevCatalogVersion;
+$('uni').textContent=YEARS.slice(-3).map(y=>y+': '+fmt(D.universe[y])).join(', ');
+for(const id of ['yFrom','yTo'])$(id).innerHTML=YEARS.map(y=>`<option>${y}</option>`).join('');
+$('yFrom').value=st.from;$('yTo').value=st.to;
+[...new Set(D.companies.map(c=>c.sector))].sort().forEach(s=>$('sector').insertAdjacentHTML('beforeend',`<option>${s}</option>`));
+$('presets').innerHTML=Object.entries(PRESETS).map(([k,p])=>`<button type="button" data-p="${k}">${p.label}</button>`).join('');
+function syncInputs(){st.w.forEach((v,i)=>$('w'+i).value=v);document.querySelectorAll('#presets button').forEach(b=>b.classList.toggle('on',b.dataset.p===st.preset));$('presetHint').textContent=st.preset?PRESETS[st.preset].hint:'Custom weights.'}
+
+function compute(){
+ const ys=YEARS.filter(y=>y>=st.from&&y<=st.to);
+ let rows=D.companies.map(c=>{
+  const t=[0,0,0,0,0,0];const byY={};
+  ys.forEach(y=>{const a=c.years[y];byY[y]=a;a.forEach((v,i)=>t[i]+=v)});
+  const emp=+(empEdits[c.ticker]||c.employees);
+  const pts=t.reduce((s,v,i)=>s+v*st.w[i],0);
+  const density=st.norm==='emp'?pts/(emp/1000):pts;
+  return {...c,employees:emp,t,byY,pts,density,cves:t[0]+t[1]+t[2]+t[3]+t[4],crit:t[0],high:t[1],kev:t[5]};
+ });
+ const ds=rows.map(r=>r.density).sort((a,b)=>a-b);const med=ds.length%2?ds[(ds.length-1)/2]:(ds[ds.length/2-1]+ds[ds.length/2])/2||1;
+ rows.forEach(r=>{r.score=Math.round(100/(1+r.density/(med||1)));r.grade=r.score>=80?'A':r.score>=65?'B':r.score>=50?'C':r.score>=35?'D':'F'});
+ [...rows].sort((a,b)=>b.score-a.score||a.density-b.density).forEach((r,i)=>r.rank=i+1);
+ return {rows,med,ys};
+}
+function render(){
+ const {rows,med,ys}=compute();
+ const q=st.q.trim().toLowerCase();
+ let view=rows.filter(r=>(!st.sector||r.sector===st.sector)&&(!q||r.name.toLowerCase().includes(q)||r.ticker.toLowerCase().includes(q)));
+ const k=st.sort,dir=st.dir==='asc'?1:-1;
+ view.sort((a,b)=>{const x=a[k],y=b[k];return ((typeof x==='string'?x.localeCompare(y):x-y)*dir)||a.rank-b.rank});
+ const best=[...rows].sort((a,b)=>a.rank-b.rank),worst=best[best.length-1],top=best[0];
+ const win=ys[0]===ys[ys.length-1]?ys[0]:`${ys[0]}–${ys[ys.length-1]}`;
+ $('finding').textContent=`${win}: ${worst.name} carries the heaviest vulnerability load for its size (${fmt(Math.round(worst.density))} points${st.norm==='emp'?' per 1,000 employees':''}); ${top.name} the lightest.`;
+ const tc=rows.reduce((s,r)=>s+r.cves,0),tk=rows.reduce((s,r)=>s+r.kev,0);
+ $('kpis').innerHTML=[[rows.length,'companies scored'],[fmt(tc),'CVEs attributed, '+win],[fmt(tk),'KEV additions, '+win],[fmt(Math.round(med)),'median density (score 50)']].map(([b,s])=>`<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join('');
+ document.querySelectorAll('th').forEach(th=>{th.removeAttribute('aria-sort');if(th.dataset.k===k)th.setAttribute('aria-sort',st.dir==='asc'?'ascending':'descending')});
+ $('tb').innerHTML=view.length?view.map(r=>row(r)+(st.open===r.ticker?detail(r,ys):'')).join(''):`<tr><td colspan="10">No companies match.</td></tr>`;
+}
+function row(r){
+ const gc='var(--g'+r.grade+')';
+ return `<tr class="row" tabindex="0" data-t="${r.ticker}" aria-expanded="${st.open===r.ticker}">
+<td class="n">${r.rank}</td><td class="co"><b>${r.name}</b><small>${r.ticker}</small><span>${r.sector}</span></td>
+<td class="n hide-s"><input class="emp" type="number" min="1" value="${r.employees}" data-t="${r.ticker}" title="${empEdits[r.ticker]?'Edited':'Annual report '+r.fy}" aria-label="Employees, ${r.name}"></td>
+<td class="n hide-xs">${fmt(r.cves)}</td><td class="n hide-s">${fmt(r.crit)}</td><td class="n hide-s">${fmt(r.high)}</td><td class="n">${fmt(r.kev)}</td>
+<td class="n hide-s">${fmt(Math.round(r.density*10)/10)}</td>
+<td><div class="bar"><i style="width:${r.score}%;background:${gc}"></i><em>${r.score}</em></div></td><td><span class="g g${r.grade}">${r.grade}</span></td></tr>`;
+}
+function detail(r,ys){
+ const mx=Math.max(1,...ys.map(y=>r.byY[y].slice(0,5).reduce((a,b)=>a+b,0)));
+ const yrs=ys.map(y=>{const a=r.byY[y],tot=a.slice(0,5).reduce((s,v)=>s+v,0);
+  return `<div class="yr"><span>${y}</span><div class="stackbar" style="width:${Math.max(2,tot/mx*100)}%">${a.slice(0,5).map((v,i)=>v?`<span title="${SEVN[i]}: ${v}" style="width:${v/tot*100}%;background:${SEVC[i]}"></span>`:'').join('')}</div><span class="n">${fmt(tot)}${a[5]?` · ${a[5]} KEV`:''}</span></div>`}).join('');
+ const kev=r.kevRecent.length?`<ul class="kev">${r.kevRecent.map(k=>`<li><code>${k[0]}</code> · added ${k[1]} · ${esc(k[2])}${k[4]?' · <span class="rw">ransomware</span>':''}<br>${esc(k[3])}</li>`).join('')}</ul>`:'<p class="hint">No entries in the CISA KEV catalog.</p>';
+ const sh=r.cves?Math.round((r.crit+r.high)/r.cves*100):0;
+ return `<tr class="det"><td colspan="10"><div class="det-grid"><div><h3>${esc(r.name)}: CVEs by year</h3>
+<div class="legend">${SEVN.map((n,i)=>`<span><i style="background:${SEVC[i]}"></i>${n}</span>`).join('')}</div>${yrs}
+<p class="hint">${sh}% of CVEs in the window are Critical or High. ${fmt(r.kevTotal)} of its CVEs are in the KEV catalog overall. Risk points in window: ${fmt(r.pts)}.</p></div>
+<div><h3>Most recent KEV additions</h3>${kev}</div></div></td></tr>`;
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+$('presets').addEventListener('click',e=>{const p=e.target.closest('button');if(!p)return;st.preset=p.dataset.p;st.w=PRESETS[st.preset].w.slice();syncInputs();render()});
+for(let i=0;i<6;i++)$('w'+i).addEventListener('input',e=>{st.w[i]=Math.max(0,+e.target.value||0);st.preset=Object.keys(PRESETS).find(k=>PRESETS[k].w.join()===st.w.join())||'';syncInputs();render()});
+$('yFrom').addEventListener('change',e=>{st.from=+e.target.value;if(st.from>st.to){st.to=st.from;$('yTo').value=st.to}render()});
+$('yTo').addEventListener('change',e=>{st.to=+e.target.value;if(st.to<st.from){st.from=st.to;$('yFrom').value=st.from}render()});
+$('norm').addEventListener('change',e=>{st.norm=e.target.value;render()});
+$('sector').addEventListener('change',e=>{st.sector=e.target.value;render()});
+$('q').addEventListener('input',e=>{st.q=e.target.value;render()});
+document.querySelector('thead').addEventListener('click',e=>{const th=e.target.closest('th');if(!th)return;const k=th.dataset.k;
+ if(st.sort===k)st.dir=st.dir==='asc'?'desc':'asc';else{st.sort=k;st.dir=['name','rank'].includes(k)?'asc':'desc'}render()});
+$('tb').addEventListener('click',e=>{if(e.target.closest('input'))return;const tr=e.target.closest('tr.row');if(!tr)return;st.open=st.open===tr.dataset.t?null:tr.dataset.t;render()});
+$('tb').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('tr.row')){e.preventDefault();st.open=st.open===e.target.dataset.t?null:e.target.dataset.t;render();document.querySelector(`tr.row[data-t="${CSS.escape(e.target.dataset.t)}"]`)?.focus()}});
+$('tb').addEventListener('change',e=>{if(!e.target.matches('input.emp'))return;const v=Math.round(+e.target.value);const c=D.companies.find(c=>c.ticker===e.target.dataset.t);
+ if(v>0&&v!==c.employees)empEdits[c.ticker]=v;else delete empEdits[c.ticker];try{localStorage.setItem('vcs-emp',JSON.stringify(empEdits))}catch(err){}render()});
+syncInputs();render();
+}
+</script>
+</body></html>
